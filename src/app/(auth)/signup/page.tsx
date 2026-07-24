@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { UserPlus, Sun, Moon, Languages, ShieldCheck, Briefcase, User } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/language-provider'
 import { useTheme } from '@/components/theme-provider'
+import { createClient } from '@/lib/supabase/client'
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('')
@@ -24,15 +25,15 @@ export default function SignupPage() {
     setError('')
     setLoading(true)
     try {
-      const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/signup`
-      const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: anon, Authorization: `Bearer ${anon}` },
-        body: JSON.stringify({ email, password, full_name: fullName, role }),
+      const supabase = createClient()
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: fullName, username: email, role } },
       })
-      const j = await res.json().catch(() => ({}))
-      if (!res.ok || j.error) { setError(t('signupFailed') + (j.error || res.statusText)); setLoading(false); return }
+      if (error) { setError(t('signupFailed') + error.message); setLoading(false); return }
+      // Account is created as "pending" — sign out any session so login stays gated on admin approval.
+      await supabase.auth.signOut()
       setSuccess(true)
       setLoading(false)
       setTimeout(() => router.push('/login'), 2500)

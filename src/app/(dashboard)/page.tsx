@@ -5,7 +5,7 @@ import { useLanguage } from '@/lib/i18n/language-provider'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { DonutChart, BarChart, MultiAreaChart, HBarChart, ProgressRing } from '@/components/charts'
+import { DonutChart, BarChart, MultiAreaChart, HBarChart, ProgressRing, Sparkline } from '@/components/charts'
 import { ApprovalControl } from '@/components/approval-control'
 import { Reveal } from '@/components/reveal'
 import { WorkerDashboard } from '@/components/worker-dashboard'
@@ -121,11 +121,24 @@ export default function DashboardPage() {
   const attendancePct = stats.totalEmployees ? Math.round((stats.activeShifts / stats.totalEmployees) * 100) : 0
   const approvalPct = stats.totalRequests ? Math.round((stats.status.approved / stats.totalRequests) * 100) : 0
   const obPct = stats.onboarding.total ? Math.round((stats.onboarding.done / stats.onboarding.total) * 100) : 0
-  const bigCards = [
-    { label: t('totalEmployees'), value: stats.totalEmployees, icon: <Users size={20} />, bg: 'bg-rose-100 dark:bg-rose-950/40', icon_bg: 'bg-rose-500', badge: `${stats.totalBranches} ${t('branches')}`, badgeCls: 'bg-rose-500/15 text-rose-600 dark:text-rose-300', href: '/employees' },
-    { label: t('attendanceRate'), value: `${attendancePct}%`, icon: <Clock size={20} />, bg: 'bg-sky-100 dark:bg-sky-950/40', icon_bg: 'bg-sky-500', badge: `${stats.activeShifts} ${t('present')}`, badgeCls: 'bg-sky-500/15 text-sky-600 dark:text-sky-300', href: '/attendance' },
-    { label: t('pendingHolidays'), value: stats.pendingHolidays + stats.pendingOvertime, icon: <ClipboardCheck size={20} />, bg: 'bg-amber-100 dark:bg-amber-950/40', icon_bg: 'bg-amber-500', badge: t('pending'), badgeCls: 'bg-amber-500/15 text-amber-600 dark:text-amber-300', href: '/orders/holidays' },
-    { label: t('totalRequests'), value: stats.totalRequests, icon: <CheckCircle2 size={20} />, bg: 'bg-emerald-100 dark:bg-emerald-950/40', icon_bg: 'bg-emerald-500', badge: `${stats.trend >= 0 ? '+' : ''}${stats.trend}%`, badgeCls: stats.trend >= 0 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300' : 'bg-red-500/15 text-red-500', href: '/orders/holidays', trendIcon: true },
+  const sumSeries = stats.reqSeries.length ? stats.reqSeries : [0, 0]
+  const apprSeriesS = stats.apprSeries.length ? stats.apprSeries : [0, 0]
+  type Big = { label: string; value: string | number; icon: React.ReactNode; accent: string; ring: string; badge: string; up?: boolean; href: string; visual: React.ReactNode }
+  const bigCards: Big[] = [
+    { label: t('totalEmployees'), value: stats.totalEmployees, icon: <Users size={19} />, accent: '#f43f5e', ring: 'shadow-rose-500/30', badge: `${stats.totalBranches} ${t('branches')}`, href: '/employees',
+      visual: <Sparkline data={stats.byBranch.length ? stats.byBranch.map((b) => b.value) : [stats.totalEmployees]} color="#f43f5e" /> },
+    { label: t('attendanceRate'), value: `${attendancePct}%`, icon: <Clock size={19} />, accent: '#0ea5e9', ring: 'shadow-sky-500/30', badge: `${stats.activeShifts} ${t('present')}`, href: '/attendance',
+      visual: (
+        <div className="w-full">
+          <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div className="h-full rounded-full bg-sky-500 transition-all duration-1000" style={{ width: `${attendancePct}%` }} />
+          </div>
+        </div>
+      ) },
+    { label: t('pendingHolidays'), value: stats.pendingHolidays + stats.pendingOvertime, icon: <ClipboardCheck size={19} />, accent: '#f59e0b', ring: 'shadow-amber-500/30', badge: t('pending'), href: '/orders/holidays',
+      visual: <Sparkline data={sumSeries.map((v, i) => Math.max(0, v - apprSeriesS[i]))} color="#f59e0b" /> },
+    { label: t('totalRequests'), value: stats.totalRequests, icon: <CheckCircle2 size={19} />, accent: '#10b981', ring: 'shadow-emerald-500/30', badge: `${stats.trend >= 0 ? '+' : ''}${stats.trend}%`, up: stats.trend >= 0, href: '/orders/holidays',
+      visual: <Sparkline data={sumSeries} color="#10b981" /> },
   ]
   const card = 'bg-[var(--card)] rounded-2xl border border-slate-200 dark:border-slate-800 p-5 h-full'
   const actIcon = (i: Activity['icon']) => i === 'holiday' ? <PlaneIcon size={15} /> : i === 'overtime' ? <CalendarClock size={15} /> : <HandCoins size={15} />
@@ -134,30 +147,50 @@ export default function DashboardPage() {
 
   const widgets: Record<string, React.ReactNode> = {
     banner: (
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 p-6 sm:p-8 text-white h-full">
-        <div className="absolute -top-8 -end-8 w-48 h-48 bg-white/10 rounded-full" />
-        <div className="absolute -bottom-12 -end-16 w-56 h-56 bg-white/5 rounded-full" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-600 to-teal-700 p-6 sm:p-8 text-white h-full shadow-xl shadow-emerald-900/20">
+        <div className="absolute inset-0 opacity-[0.12]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, white 1px, transparent 0)', backgroundSize: '22px 22px' }} />
+        <div className="absolute -top-10 -end-10 w-52 h-52 bg-white/10 rounded-full blur-2xl" />
+        <div className="absolute -bottom-16 -end-20 w-64 h-64 bg-teal-300/20 rounded-full blur-3xl" />
+        <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="min-w-0">
-            <p className="text-emerald-100 text-sm mb-1">{new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+            <p className="text-emerald-100/90 text-sm mb-1 flex items-center gap-2">
+              <span className="inline-flex w-2 h-2 rounded-full bg-emerald-200 animate-pulse" />
+              {new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
             <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 flex-wrap">{greeting}، {profile?.full_name || ''} <span>👋</span></h1>
-            <p className="text-emerald-100 mt-2 text-sm">{t('overview')}</p>
+            <p className="text-emerald-100/90 mt-2 text-sm">{t('overview')}</p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              {[
+                { icon: <Users size={13} />, label: t('employees'), value: stats.totalEmployees },
+                { icon: <Building2 size={13} />, label: t('branches'), value: stats.totalBranches },
+                { icon: <ClipboardCheck size={13} />, label: t('pending'), value: stats.pendingHolidays + stats.pendingOvertime },
+              ].map((s) => (
+                <span key={s.label} className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur px-3 py-1.5 rounded-xl text-xs font-medium">
+                  {s.icon} <b className="tabular-nums">{loading ? '—' : s.value}</b> <span className="text-emerald-50/80">{s.label}</span>
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="hidden sm:flex w-20 h-20 rounded-3xl bg-white/15 backdrop-blur items-center justify-center flex-shrink-0"><Pill size={36} className="text-white" /></div>
+          <div className="hidden sm:flex w-20 h-20 rounded-3xl bg-white/15 backdrop-blur items-center justify-center flex-shrink-0 ring-1 ring-white/20"><Pill size={36} className="text-white" /></div>
         </div>
       </div>
     ),
     stats: (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {bigCards.map((c) => (
-          <Link key={c.label} href={c.href} className={`${c.bg} rounded-2xl p-5 hover:-translate-y-1 transition-transform`}>
-            <div className="flex items-center justify-between mb-4">
-              <div className={`w-11 h-11 rounded-2xl ${c.icon_bg} flex items-center justify-center text-white shadow-lg`}>{c.icon}</div>
-              <span className={`text-xs font-semibold px-2 py-1 rounded-lg flex items-center gap-1 ${c.badgeCls}`}>{c.trendIcon && (stats.trend >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />)}{c.badge}</span>
+          <Link key={c.label} href={c.href} className="group relative bg-[var(--card)] rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 hover:border-transparent hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+            <span className="absolute inset-x-0 top-0 h-1 opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: c.accent }} />
+            <div className="flex items-start justify-between mb-3">
+              <div className={`w-11 h-11 rounded-2xl flex items-center justify-center text-white shadow-lg ${c.ring}`} style={{ background: c.accent }}>{c.icon}</div>
+              <span className="text-[11px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 tabular-nums" style={{ background: `${c.accent}18`, color: c.accent }}>
+                {c.up !== undefined && (c.up ? <TrendingUp size={12} /> : <TrendingDown size={12} />)}{c.badge}
+              </span>
             </div>
-            <p className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums">{loading ? '—' : c.value}</p>
-            <p className="text-sm text-slate-600 dark:text-slate-300 mt-1">{c.label}</p>
-            <p className="text-[11px] text-slate-400 mt-2">{t('lastUpdate')}: {new Date().toLocaleDateString(lang === 'ar' ? 'ar-EG' : 'en-US', { day: 'numeric', month: 'short' })}</p>
+            <p className="text-3xl font-bold text-slate-900 dark:text-white tabular-nums leading-none">{loading ? '—' : c.value}</p>
+            <div className="flex items-end justify-between mt-3 gap-2">
+              <p className="text-sm text-slate-500 dark:text-slate-400">{c.label}</p>
+              <div className="flex-shrink-0 opacity-90 group-hover:opacity-100 transition-opacity">{c.visual}</div>
+            </div>
           </Link>
         ))}
       </div>

@@ -243,3 +243,29 @@ export function AreaChart({ data, color = '#10b981' }: { data: { label: string; 
     </div>
   )
 }
+
+/** Tiny inline sparkline (area + line) for KPI cards. */
+export function Sparkline({ data, color = '#10b981', width = 96, height = 32 }: { data: number[]; color?: string; width?: number; height?: number }) {
+  const uid = `sp-${color.replace('#', '')}-${data.join('-').slice(0, 12)}`
+  const pts = data.length > 1 ? data : [data[0] ?? 0, data[0] ?? 0]
+  const max = Math.max(...pts), min = Math.min(...pts)
+  const range = max - min || 1
+  const stepX = width / (pts.length - 1)
+  const y = (v: number) => height - 3 - ((v - min) / range) * (height - 6)
+  const line = pts.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * stepX).toFixed(1)},${y(v).toFixed(1)}`).join(' ')
+  const area = `${line} L${width},${height} L0,${height} Z`
+  const lastX = (pts.length - 1) * stepX, lastY = y(pts[pts.length - 1])
+  return (
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+      <defs>
+        <linearGradient id={uid} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="100%" stopColor={color} stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#${uid})`} />
+      <path d={line} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lastX} cy={lastY} r="2.5" fill={color} />
+    </svg>
+  )
+}
