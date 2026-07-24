@@ -8,7 +8,7 @@ import type { TranslationKey } from '@/lib/i18n/translations'
 import {
   LayoutDashboard, Users, Building2, Landmark, Calendar, Clock, DollarSign, Star, Plane,
   HandCoins, Timer, UserX, CalendarClock, AlarmClock, MessageSquare, Package, Newspaper,
-  FileText, LogOut, X, ShieldCheck, Pill, Rocket, ChevronsLeft,
+  FileText, LogOut, X, ShieldCheck, Pill, Rocket, ChevronsLeft, Settings,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -35,6 +35,7 @@ const navItems: NavItem[] = [
   { key: 'news', href: '/news', icon: <Newspaper size={19} /> },
   { key: 'users', href: '/users', icon: <ShieldCheck size={19} />, adminOnly: true },
   { key: 'auditLogs', href: '/audit-logs', icon: <FileText size={19} />, adminOnly: true },
+  { key: 'customize', href: '/settings', icon: <Settings size={19} /> },
 ]
 
 export function Sidebar({ open, onClose, collapsed, onToggleCollapse }: {
