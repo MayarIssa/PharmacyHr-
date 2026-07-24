@@ -12,30 +12,32 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-interface NavItem { key: TranslationKey; href: string; icon: React.ReactNode; adminOnly?: boolean }
+// access levels: 'all' = every signed-in user (incl. workers); 'manage' = admin + hr; 'admin' = admin only
+type Access = 'all' | 'manage' | 'admin'
+interface NavItem { key: TranslationKey; href: string; icon: React.ReactNode; access: Access }
 
 const navItems: NavItem[] = [
-  { key: 'dashboard', href: '/', icon: <LayoutDashboard size={19} /> },
-  { key: 'employees', href: '/employees', icon: <Users size={19} /> },
-  { key: 'onboarding', href: '/onboarding', icon: <Rocket size={19} /> },
-  { key: 'branches', href: '/branches', icon: <Building2 size={19} /> },
-  { key: 'banks', href: '/banks', icon: <Landmark size={19} /> },
-  { key: 'attendance', href: '/attendance', icon: <Clock size={19} /> },
-  { key: 'schedules', href: '/schedules', icon: <Calendar size={19} /> },
-  { key: 'payroll', href: '/payroll', icon: <DollarSign size={19} /> },
-  { key: 'evaluations', href: '/evaluations', icon: <Star size={19} /> },
-  { key: 'holidays', href: '/orders/holidays', icon: <Plane size={19} /> },
-  { key: 'borrows', href: '/orders/borrows', icon: <HandCoins size={19} /> },
-  { key: 'overtime', href: '/orders/overtime', icon: <Timer size={19} /> },
-  { key: 'resignations', href: '/orders/resignations', icon: <UserX size={19} /> },
-  { key: 'appointments', href: '/orders/appointments', icon: <CalendarClock size={19} /> },
-  { key: 'forgottenHours', href: '/orders/forgotten-hours', icon: <AlarmClock size={19} /> },
-  { key: 'complaints', href: '/complaints', icon: <MessageSquare size={19} /> },
-  { key: 'custody', href: '/custody', icon: <Package size={19} /> },
-  { key: 'news', href: '/news', icon: <Newspaper size={19} /> },
-  { key: 'users', href: '/users', icon: <ShieldCheck size={19} />, adminOnly: true },
-  { key: 'auditLogs', href: '/audit-logs', icon: <FileText size={19} />, adminOnly: true },
-  { key: 'customize', href: '/settings', icon: <Settings size={19} /> },
+  { key: 'dashboard', href: '/', icon: <LayoutDashboard size={19} />, access: 'all' },
+  { key: 'employees', href: '/employees', icon: <Users size={19} />, access: 'manage' },
+  { key: 'onboarding', href: '/onboarding', icon: <Rocket size={19} />, access: 'manage' },
+  { key: 'branches', href: '/branches', icon: <Building2 size={19} />, access: 'manage' },
+  { key: 'banks', href: '/banks', icon: <Landmark size={19} />, access: 'manage' },
+  { key: 'attendance', href: '/attendance', icon: <Clock size={19} />, access: 'manage' },
+  { key: 'schedules', href: '/schedules', icon: <Calendar size={19} />, access: 'all' },
+  { key: 'payroll', href: '/payroll', icon: <DollarSign size={19} />, access: 'all' },
+  { key: 'evaluations', href: '/evaluations', icon: <Star size={19} />, access: 'manage' },
+  { key: 'holidays', href: '/orders/holidays', icon: <Plane size={19} />, access: 'all' },
+  { key: 'borrows', href: '/orders/borrows', icon: <HandCoins size={19} />, access: 'all' },
+  { key: 'overtime', href: '/orders/overtime', icon: <Timer size={19} />, access: 'all' },
+  { key: 'resignations', href: '/orders/resignations', icon: <UserX size={19} />, access: 'all' },
+  { key: 'appointments', href: '/orders/appointments', icon: <CalendarClock size={19} />, access: 'all' },
+  { key: 'forgottenHours', href: '/orders/forgotten-hours', icon: <AlarmClock size={19} />, access: 'all' },
+  { key: 'complaints', href: '/complaints', icon: <MessageSquare size={19} />, access: 'all' },
+  { key: 'custody', href: '/custody', icon: <Package size={19} />, access: 'manage' },
+  { key: 'news', href: '/news', icon: <Newspaper size={19} />, access: 'all' },
+  { key: 'users', href: '/users', icon: <ShieldCheck size={19} />, access: 'admin' },
+  { key: 'auditLogs', href: '/audit-logs', icon: <FileText size={19} />, access: 'admin' },
+  { key: 'customize', href: '/settings', icon: <Settings size={19} />, access: 'all' },
 ]
 
 export function Sidebar({ open, onClose, collapsed, onToggleCollapse }: {
@@ -46,8 +48,12 @@ export function Sidebar({ open, onClose, collapsed, onToggleCollapse }: {
   const { profile } = useAuthStore()
   const { t } = useLanguage()
 
-  const isAdmin = profile?.role === 'admin'
-  const items = navItems.filter((i) => !i.adminOnly || isAdmin)
+  const role = profile?.role
+  const isAdmin = role === 'admin'
+  const isManager = role === 'admin' || role === 'hr'
+  const items = navItems.filter((i) =>
+    i.access === 'all' ? true : i.access === 'manage' ? isManager : isAdmin
+  )
 
   const handleLogout = async () => {
     const supabase = createClient()

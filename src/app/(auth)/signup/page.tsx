@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { UserPlus, Sun, Moon, Languages, ShieldCheck, Briefcase } from 'lucide-react'
+import { UserPlus, Sun, Moon, Languages, ShieldCheck, Briefcase, User } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n/language-provider'
 import { useTheme } from '@/components/theme-provider'
 
@@ -11,7 +11,7 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<'hr' | 'admin'>('hr')
+  const [role, setRole] = useState<'hr' | 'admin' | 'employee'>('employee')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -42,11 +42,11 @@ export default function SignupPage() {
     }
   }
 
-  const roleBtn = (r: 'hr' | 'admin', icon: React.ReactNode, label: string) => (
+  const roleBtn = (r: 'hr' | 'admin' | 'employee', icon: React.ReactNode, label: string) => (
     <button
       type="button"
       onClick={() => setRole(r)}
-      className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-medium transition ${
+      className={`flex-1 flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border text-xs font-medium transition ${
         role === r
           ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300'
           : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'
@@ -89,8 +89,9 @@ export default function SignupPage() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">{t('accountType')}</label>
                 <div className="flex gap-2">
-                  {roleBtn('hr', <Briefcase size={16} />, t('hr'))}
-                  {roleBtn('admin', <ShieldCheck size={16} />, t('admin'))}
+                  {roleBtn('employee', <User size={17} />, t('worker'))}
+                  {roleBtn('hr', <Briefcase size={17} />, t('hr'))}
+                  {roleBtn('admin', <ShieldCheck size={17} />, t('admin'))}
                 </div>
               </div>
               <div>

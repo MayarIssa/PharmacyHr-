@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { DonutChart, BarChart, MultiAreaChart, HBarChart, ProgressRing } from '@/components/charts'
 import { ApprovalControl } from '@/components/approval-control'
 import { Reveal } from '@/components/reveal'
+import { WorkerDashboard } from '@/components/worker-dashboard'
 import { WIDGETS, loadPrefs, spanClass, type DashPrefs } from '@/lib/dashboard-prefs'
 import {
   Users, Building2, Clock, Plane, Timer, MessageSquare, TrendingUp, TrendingDown, ArrowUpRight, Pill,
@@ -63,7 +64,10 @@ export default function DashboardPage() {
 
   useEffect(() => { setPrefs(loadPrefs()) }, [])
 
+  const isWorker = profile?.role === 'employee'
+
   const fetchAll = async () => {
+    if (isWorker) { setLoading(false); return }
     const cnt = async (build: PromiseLike<{ count: number | null }>): Promise<number> => (await build).count ?? 0
     const base = (table: string) => supabase.from(table).select('id', { count: 'exact', head: true })
     const [
@@ -234,6 +238,9 @@ export default function DashboardPage() {
 
   const spanOf = (id: string) => WIDGETS.find((w) => w.id === id)?.span ?? 1
   const visible = prefs.order.filter((id) => !prefs.hidden.includes(id) && widgets[id])
+
+  // Workers get a dedicated self-service dashboard (own requests, schedule, payslips, news)
+  if (isWorker) return <WorkerDashboard />
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
