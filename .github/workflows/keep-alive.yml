@@ -15,6 +15,6 @@ jobs:
       - name: Ping Supabase
         run: |
           set -a; . ./.env.production; set +a
-          curl -fsS "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/branches?select=id&limit=1" \
+          curl -sS "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/branches?select=id&limit=1" \
             -H "apikey: $NEXT_PUBLIC_SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $NEXT_PUBLIC_SUPABASE_ANON_KEY" -o /dev/null -w "%{http_code}\n"
